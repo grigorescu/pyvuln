@@ -1,5 +1,7 @@
 from django.db import models
 
+# Most models can have one or more types defined.
+
 class ModelType(models.Model):
     """A base class consisting of a short name and a description.
     Used for defining and assigning types to the various models.
@@ -9,14 +11,38 @@ class ModelType(models.Model):
 
     class Meta:
         abstract = True
+class DepartmentType(ModelType):
+    """Department/group type (e.g. External, internal, self-managed)"""
+class ContactType(ModelType):
+    """Contact type (e.g. system, network, administrative, hourly)"""
+class ScanType(ModelType):
+    """Scan type (e.g. production, development, Nessus)"""
+class SystemType(ModelType):
+    """System type (e.g. virtual, physical, production, test, critical)"""
+class ResultType(ModelType):
+    """Result type. ...honestly, I have no idea what this could be."""
+class NetworkType(ModelType):
+    """Network type (e.g. datacenter, external, internal, development, test)"""
+class FirewallGroupType(ModelType):
+    """Firewall group type (e.g. RDP-vulnerable, SSH-vulnerable, etc.)"""
+class VulnerabilityType(ModelType):
+    """Vulnerability type (e.g. system, service, local, remote)"""
+class PluginType(ModelType):
+    """Plugin type (e.g. safe, dangerous, unauthenticated,
+    high false-positive)"""
+class PluginFamilyType(ModelType):
+    """Plugin family type (e.g. local, remote, Windows, OS X)"""
+class ClassificationType(ModelType):
+    """Classification type (e.g. justification needed, followup needed)"""
+class StatusType(ModelType):
+    """Status type (e.g. approval required, more information requested)"""
+
+
 
 class Department(models.Model):
     """A department or group."""
     deptName = models.CharField(max_length=150, unique=True)
     typeList = models.ManyToManyField("DepartmentType", null=True)
-
-class DepartmentType(ModelType):
-    """Department/group type (e.g. External, internal, self-managed)"""
 
 class Contact(models.Model):
     """A person that is responsible for a given system or network."""
@@ -24,28 +50,25 @@ class Contact(models.Model):
     name = models.CharField(max_length=100)
     typeList = models.ManyToManyField("ContactType", null=True)
 
-class ContactType(ModelType):
-    """Contact type (e.g. system, network, administrative, hourly)"""
-
 class Scan(models.Model):
     """A vulnerability scan."""
     description = models.CharField(max_length=50)
+    startTime = models.DateTimeField("Start time")
     scanner = models.ForeignKey("Scanner")
     typeList = models.ManyToManyField("ScanType", null=True)
 
-class ScanType(ModelType):
-    """Scan type (e.g. production, development, Nessus)"""
-
 class System(models.Model):
     """A physical or virtual system that may have vulnerabilities."""
-    ip = models.IPAddressField("IP address", unique=True)
-    networkSlice = models.ForeignKey("NetworkSlice")
+    mac = models.CharField("MAC address")
+    interfaceList = models.ManyToManyField("Interface", null=True)
     contactList = models.ManyToManyField("Contact", null=True)
     departmentList = models.ManyToManyField("Department", null=True)
     typeList = models.ManyToManyField("SystemType", null=True)
 
-class SystemType(ModelType):
-    """System type (e.g. virtual, physical, production, test, critical)"""
+class Interface(models.Model):
+    """A network interface for a system."""
+    ip = models.IPAddressField("IP address")
+    networkSlice = models.ForeignKey("NetworkSlice")
 
 class Result(models.Model):
     """Result of a scan, for a single system."""
@@ -58,13 +81,9 @@ class Result(models.Model):
     fqdn = models.CharField("Fully qualified domain name", max_length=150,
         null=True)
     netbiosName = models.CharField("NetBIOS name", max_length=100, null=True)
-    macAddress = models.CharField("MAC address", max_length=35, null=True)
     sysType = models.CharField("Detected system type", max_length=100,
         null=True)
     typeList = models.ManyToManyField("ResultType", null=True)
-
-class ResultType(ModelType):
-    """Result type. ...honestly, I have no idea what this could be."""
 
 class Network(models.Model):
     """A physical or logical network."""
@@ -72,9 +91,6 @@ class Network(models.Model):
     contactList = models.ManyToManyField("Contact", null=True)
     departmentList = models.ManyToManyField("Department", null=True)
     typeList = models.ManyToManyField("NetworkType", null=True)
-
-class NetworkType(ModelType):
-    """Network type (e.g. datacenter, external, internal, development, test)"""
 
 class NetworkSlice(models.Model):
     """A network segment with a specific firewall group."""
@@ -89,9 +105,6 @@ class FirewallGroup(models.Model):
     shortName = models.CharField("Group name", max_length=50)
     description = models.CharField("Group description", max_length=250)
     typeList = models.ManyToManyField("FirewallGroupType", null=True)
-
-class FirewallGroupType(ModelType):
-    """Firewall group type (e.g. RDP-vulnerable, SSH-vulnerable, etc.)"""
 
 class Vulnerability(models.Model):
     """A potential vulnerability, as found by Nessus."""
@@ -126,9 +139,6 @@ class Vulnerability(models.Model):
     class Meta:
         verbose_name_plural = "Vulnerabilities"
 
-class VulnerabilityType(ModelType):
-    """Vulnerability type (e.g. system, service, local, remote)"""
-
 class Plugin(models.Model):
     """A vulnerability scanner plugin."""
 
@@ -149,10 +159,6 @@ class Plugin(models.Model):
     class Meta:
         unique_together = ["pluginId", "version"]
 
-class PluginType(ModelType):
-    """Plugin type (e.g. safe, dangerous, unauthenticated,
-    high false-positive)"""
-
 class PluginField(models.Model):
     """Plugins can have different fields."""
     name = models.CharField(max_length=30)
@@ -172,17 +178,11 @@ class PluginFamily(models.Model):
     class Meta:
         verbose_name_plural = "Plugin families"
 
-class PluginFamilyType(ModelType):
-    """Plugin family type (e.g. local, remote, Windows, OS X)"""
-
 class Classification(models.Model):
     """A potential classification that a vulnerability can be classified as."""
     shortName = models.CharField(max_length=50)
     description = models.CharField(max_length=250, null=True)
     typeList = models.ManyToManyField("ClassificationType", null=True)
-
-class ClassificationType(ModelType):
-    """Classification type (e.g. justification needed, followup needed)"""
 
 class Status(models.Model):
     """A status for this vulnerability as it goes through the lifecycle."""
@@ -192,9 +192,6 @@ class Status(models.Model):
 
     class Meta:
         verbose_name_plural = "Statuses"
-
-class StatusType(ModelType):
-    """Status type (e.g. approval required, more information requested)"""
 
 class Scanner(models.Model):
     """A vulnerability scanner."""
