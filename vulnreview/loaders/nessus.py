@@ -9,7 +9,7 @@ setup_environ(settings)
 
 timeFormat = "%a %b %d %H:%M:%S %Y"
 
-from vuln_review.models import Scan, System, Network, Vulnerability,\
+from vulnreview.models import Scan, System, Network, Vulnerability,\
     Plugin, PluginFamily, Classification, Status, PluginFieldValue,\
     Scanner, Result, NetworkSlice, FirewallGroup, PluginField
 
